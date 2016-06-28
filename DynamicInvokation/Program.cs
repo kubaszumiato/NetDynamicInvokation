@@ -2,41 +2,72 @@
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Linq;
+using static System.Console;
+using static System.Int32;
 
 namespace DynamicInvokation
 {
     public class Program
     {
+        private static int method;
+        private static int runNumber;
+        private static void DefaultParameters()
+        {
+            method = (int)InvokationMethod.AllInvokations;
+            runNumber = 1000000;
+        }
         public static void Main(string[] args)
         {
-            int method = 5;
-            int runNumber = 1000000;
-            try
+            //parse command line args
+            if (args.Length > 1)
             {
-                if (args.Length > 1)
-                {
-                    Int32.TryParse(args[0], out method);
-                    Int32.TryParse(args[1], out runNumber);
-                }
-                else if (args.Length == 1)
-                {
-                    Int32.TryParse(args[0], out method);
-                }
+                TryParse(args[0], out method);
+                TryParse(args[1], out runNumber);
             }
-            catch
+            else if (args.Length == 1)
             {
-                Console.WriteLine("There was a problem, when applying custom starting arguments. Trying to continue the process...");
+                TryParse(args[0], out method);
+            }
+            else
+            {
+                InputParametersFromConsole();
             }
 
-            Console.WriteLine("Populating cache, press any key to continue... ");
-            Console.ReadLine();
+            WriteLine($"Testing with method: {(InvokationMethod)method} with number of runs: {runNumber}. Press any key to continue...");
+            ReadKey();
+
+            WriteLine("Populating cache, press any key to continue... ");
+            ReadKey();
             MethodsDictionary.FeedCache();
 
-            Console.WriteLine($"Testing with method: {(InvokationMethod)method} with number of runs: {runNumber}. Press any key to continue...");
-            Console.ReadLine();
+
             TestApproaches(method, runNumber);
 
-            Console.ReadKey();
+            ReadKey();
+        }
+
+        private static void InputParametersFromConsole()
+        {
+            WriteLine("Please provide number of the method that should be used for invokation:");
+            foreach (var value in Enum.GetValues(typeof(InvokationMethod)))
+            {
+                WriteLine($"{(int)value}: {(InvokationMethod)value}");
+            }
+            var option = ReadLine();
+            Clear();
+            if (!TryParse(option, out method) || Enum.IsDefined(typeof(InvokationMethod), option))
+            {
+                DefaultParameters();
+                WriteLine($"Provided method number is incorrect. Using default value: {InvokationMethod.AllInvokations}");
+            }
+
+            WriteLine("Please provide a positive, integer number of method invokations used for tests");
+            var number = ReadLine();
+            if (!TryParse(number, out runNumber) || runNumber < 1)
+            {
+                DefaultParameters();
+                WriteLine($"Provided value is not a positive, integer value, using default value of {runNumber}");
+            }
         }
 
         public enum InvokationMethod
@@ -52,7 +83,7 @@ namespace DynamicInvokation
         public static void TestApproaches(int method, int runNumber)
         {
             List<ITester> testers = new List<ITester>();
-            switch ((InvokationMethod) method)
+            switch ((InvokationMethod)method)
             {
                 case InvokationMethod.DirectInvokation:
                     testers.Add(new DirectInvoke());
@@ -67,15 +98,15 @@ namespace DynamicInvokation
                     testers.Add(new DelegateInvoke());
                     break;
                 case InvokationMethod.AllInvokations:
-                    testers.AddRange( 
+                    testers.AddRange(
                         new ITester[]
                         {
                             new DirectInvoke(),
                             new DelegateDynamicInvoke(),
                             new DelegateInvoke(),
-                            new ExpressionTreesInvoke(), 
+                            new ExpressionTreesInvoke(),
                             new MethodInfoInvoke()
-                        } );
+                        });
                     break;
                 default:
                     testers.Add(new MethodInfoInvoke());
@@ -87,8 +118,8 @@ namespace DynamicInvokation
             testers.ForEach(t =>
             {
                 var name = t.GetType().Name;
-                Console.WriteLine("Testing: {0}, press any key to continue...", name);
-                Console.ReadLine();
+                WriteLine("Testing: {0}, press any key to continue...", name);
+                ReadLine();
 
                 Stopwatch sw = new Stopwatch();
 
@@ -114,7 +145,7 @@ namespace DynamicInvokation
                 totals.Add(name, setup + executionTime);
             });
 
-            
+
             PrintDict(nameof(setups), setups);
             PrintDict(nameof(methods), methods);
             PrintDict(nameof(totals), totals);
@@ -122,10 +153,10 @@ namespace DynamicInvokation
 
         private static void PrintDict(string name, Dictionary<string, TimeSpan> dict)
         {
-            Console.WriteLine($"\n\n================ {name} ==============\n\n");
+            WriteLine($"\n\n================ {name} ==============\n\n");
             foreach (var entry in dict.OrderBy(k => k.Value))
             {
-                Console.WriteLine("Method: {0,-25}  {1}: {2,-15}", entry.Key, name, entry.Value);
+                WriteLine("Method: {0,-25}  {1}: {2,-15}", entry.Key, name, entry.Value);
             }
         }
     }
